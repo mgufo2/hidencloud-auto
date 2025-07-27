@@ -2,7 +2,7 @@ import os
 import time
 import sys
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
-from playwright_stealth.sync_api import stealth_sync
+from python_playwright_stealth import stealth_sync # <--- 【最终修正】
 
 # --- 全局配置 ---
 HIDENCLOUD_COOKIE = os.environ.get('HIDENCLOUD_COOKIE')
