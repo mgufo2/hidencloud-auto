@@ -21,9 +21,9 @@ jobs:
           python-version: '3.11'
 
       # --- 修改点在这里 ---
-      - name: Install Playwright, stealth plugin and dependencies
+      - name: Install Playwright and dependencies
         run: |
-          pip install playwright python-playwright-stealth
+          pip install playwright
           python -m playwright install --with-deps chromium
 
       - name: Run Renew Script
