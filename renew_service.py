@@ -2,23 +2,18 @@ import os
 import time
 import sys
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+from playwright_stealth import stealth_sync # <--- 【新增】导入 stealth
 
-# --- 全局配置 ---
-# 从环境变量读取机密信息
-# 优先使用的 Cookie
+# --- 全局配置 (无变动) ---
 HIDENCLOUD_COOKIE = os.environ.get('HIDENCLOUD_COOKIE')
-# 备用登录方案的邮箱和密码
 HIDENCLOUD_EMAIL = os.environ.get('HIDENCLOUD_EMAIL')
 HIDENCLOUD_PASSWORD = os.environ.get('HIDENCLOUD_PASSWORD')
-
-# 目标网页 URL
 BASE_URL = "https://dash.hidencloud.com"
 LOGIN_URL = f"{BASE_URL}/auth/login"
 SERVICE_URL = f"{BASE_URL}/service/62037/manage"
-
-# Cookie 名称
 COOKIE_NAME = "remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d"
 
+# --- log, login, renew_service 函数 (无变动) ---
 def log(message):
     """打印带时间戳的日志"""
     print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {message}", flush=True)
@@ -155,19 +150,17 @@ def renew_service(page):
         log("✅ 'Create Invoice' 按钮已点击。")
 
         # --- 步骤 3: 点击 Pay 按钮 ---
-        # 在点击 "Create Invoice" 后，网站可能会弹出 Cloudflare 安全验证，需要等待其完成。
-        # 我们通过延长查找 "Pay" 按钮的超时时间来给验证过程留出足够时间。
         log("步骤 3: 正在等待发票页面加载（可能会有安全验证），并查找 'Pay' 按钮...")
         
-        # 将超时时间从 30 秒增加到 90 秒
+        # 使用伪装插件后，Cloudflare验证页可能不会出现或很快消失
+        # 我们可以将超时时间保持在一个较高的值以确保稳定，但也可以适当调回，例如60秒
         pay_button = page.locator('a:has-text("Pay"), button:has-text("Pay")').first
-        pay_button.wait_for(state="visible", timeout=90000) # <--- 【关键修改点】
+        pay_button.wait_for(state="visible", timeout=90000) 
         
         log("✅ 'Pay' 按钮已找到，正在点击...")
         pay_button.click()
         log("✅ 'Pay' 按钮已点击。")
         
-        # 等待一小段时间，确保支付请求已发出
         time.sleep(5)
         log("续费流程似乎已成功触发。请登录网站确认续费状态。")
         page.screenshot(path="renew_success.png")
@@ -182,6 +175,7 @@ def renew_service(page):
         page.screenshot(path="renew_general_error.png")
         return False
 
+# --- main 函数 (主要修改点) ---
 def main():
     """主函数，编排整个自动化流程"""
     if not HIDENCLOUD_COOKIE and not (HIDENCLOUD_EMAIL and HIDENCLOUD_PASSWORD):
@@ -190,12 +184,19 @@ def main():
 
     with sync_playwright() as p:
         log("启动浏览器...")
-        browser = p.chromium.launch(headless=True) # 在 GitHub Actions 中必须使用 headless 模式
+        browser = p.chromium.launch(headless=True)
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
         )
         page = context.new_page()
-        log("浏览器启动成功。")
+
+        # --- 【新增】应用 stealth 补丁 ---
+        log("应用 stealth 伪装补丁...")
+        stealth_sync(page)
+        log("✅ 补丁应用成功。")
+        # --------------------------------
+
+        log("浏览器启动成功。") # 这句日志移到后面更合适
 
         try:
             # 步骤 1: 登录
