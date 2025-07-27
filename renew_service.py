@@ -128,7 +128,8 @@ def renew_service(page):
     1. 访问服务管理页面
     2. 点击 Renew
     3. 点击 Create Invoice
-    4. 点击 Pay
+    4. 等待 Cloudflare 验证通过
+    5. 点击 Pay
     """
     try:
         log("开始执行续费任务...")
@@ -148,17 +149,21 @@ def renew_service(page):
 
         # --- 步骤 2: 点击 Create Invoice 按钮 ---
         log("步骤 2: 正在查找并点击 'Create Invoice' 按钮...")
-        # 等待新页面/弹窗加载
         create_invoice_button = page.locator('button:has-text("Create Invoice")')
         create_invoice_button.wait_for(state="visible", timeout=30000)
         create_invoice_button.click()
         log("✅ 'Create Invoice' 按钮已点击。")
 
         # --- 步骤 3: 点击 Pay 按钮 ---
-        log("步骤 3: 正在查找并点击 'Pay' 按钮...")
-        # 等待发票页面加载
+        # 在点击 "Create Invoice" 后，网站可能会弹出 Cloudflare 安全验证，需要等待其完成。
+        # 我们通过延长查找 "Pay" 按钮的超时时间来给验证过程留出足够时间。
+        log("步骤 3: 正在等待发票页面加载（可能会有安全验证），并查找 'Pay' 按钮...")
+        
+        # 将超时时间从 30 秒增加到 90 秒
         pay_button = page.locator('a:has-text("Pay"), button:has-text("Pay")').first
-        pay_button.wait_for(state="visible", timeout=30000)
+        pay_button.wait_for(state="visible", timeout=90000) # <--- 【关键修改点】
+        
+        log("✅ 'Pay' 按钮已找到，正在点击...")
         pay_button.click()
         log("✅ 'Pay' 按钮已点击。")
         
