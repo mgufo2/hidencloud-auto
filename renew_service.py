@@ -2,7 +2,7 @@ import os
 import time
 import sys
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
-from playwright_stealth import stealth_sync # <--- 【新增】导入 stealth
+from playwright_stealth.sync_api import stealth_sync # <--- 【已修正】导入 stealth
 
 # --- 全局配置 (无变动) ---
 HIDENCLOUD_COOKIE = os.environ.get('HIDENCLOUD_COOKIE')
@@ -133,91 +133,4 @@ def renew_service(page):
             log(f"当前不在目标页面，正在导航至: {SERVICE_URL}")
             page.goto(SERVICE_URL, wait_until="networkidle", timeout=60000)
         
-        log("服务管理页面已加载。")
-
-        # --- 步骤 1: 点击 Renew 按钮 ---
-        log("步骤 1: 正在查找并点击 'Renew' 按钮...")
-        renew_button = page.locator('button:has-text("Renew")')
-        renew_button.wait_for(state="visible", timeout=30000)
-        renew_button.click()
-        log("✅ 'Renew' 按钮已点击。")
-
-        # --- 步骤 2: 点击 Create Invoice 按钮 ---
-        log("步骤 2: 正在查找并点击 'Create Invoice' 按钮...")
-        create_invoice_button = page.locator('button:has-text("Create Invoice")')
-        create_invoice_button.wait_for(state="visible", timeout=30000)
-        create_invoice_button.click()
-        log("✅ 'Create Invoice' 按钮已点击。")
-
-        # --- 步骤 3: 点击 Pay 按钮 ---
-        log("步骤 3: 正在等待发票页面加载（可能会有安全验证），并查找 'Pay' 按钮...")
-        
-        # 使用伪装插件后，Cloudflare验证页可能不会出现或很快消失
-        # 我们可以将超时时间保持在一个较高的值以确保稳定，但也可以适当调回，例如60秒
-        pay_button = page.locator('a:has-text("Pay"), button:has-text("Pay")').first
-        pay_button.wait_for(state="visible", timeout=90000) 
-        
-        log("✅ 'Pay' 按钮已找到，正在点击...")
-        pay_button.click()
-        log("✅ 'Pay' 按钮已点击。")
-        
-        time.sleep(5)
-        log("续费流程似乎已成功触发。请登录网站确认续费状态。")
-        page.screenshot(path="renew_success.png")
-        return True
-
-    except PlaywrightTimeoutError as e:
-        log(f"❌ 续费任务超时: 未在规定时间内找到元素。请检查选择器或页面是否已更改。错误: {e}")
-        page.screenshot(path="renew_timeout_error.png")
-        return False
-    except Exception as e:
-        log(f"❌ 续费任务执行过程中发生未知错误: {e}")
-        page.screenshot(path="renew_general_error.png")
-        return False
-
-# --- main 函数 (主要修改点) ---
-def main():
-    """主函数，编排整个自动化流程"""
-    if not HIDENCLOUD_COOKIE and not (HIDENCLOUD_EMAIL and HIDENCLOUD_PASSWORD):
-        log("❌ 致命错误: 必须提供 HIDENCLOUD_COOKIE 或 (HIDENCLOUD_EMAIL 和 HIDENCLOUD_PASSWORD) 环境变量。")
-        sys.exit(1)
-
-    with sync_playwright() as p:
-        log("启动浏览器...")
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-        )
-        page = context.new_page()
-
-        # --- 【新增】应用 stealth 补丁 ---
-        log("应用 stealth 伪装补丁...")
-        stealth_sync(page)
-        log("✅ 补丁应用成功。")
-        # --------------------------------
-
-        log("浏览器启动成功。") # 这句日志移到后面更合适
-
-        try:
-            # 步骤 1: 登录
-            if not login(page):
-                log("登录失败，程序终止。")
-                sys.exit(1) # 登录失败则退出
-
-            # 步骤 2: 执行续费
-            if not renew_service(page):
-                log("续费失败，程序终止。")
-                sys.exit(1) # 续费失败则退出
-            
-            log("🎉🎉🎉 自动化续费任务成功完成！ 🎉🎉🎉")
-
-        except Exception as e:
-            log(f"💥 主程序发生严重错误: {e}")
-            page.screenshot(path="main_critical_error.png")
-            sys.exit(1)
-        finally:
-            log("关闭浏览器。")
-            browser.close()
-
-if __name__ == "__main__":
-    main()
+        log
