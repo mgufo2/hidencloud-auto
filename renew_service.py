@@ -122,12 +122,12 @@ def renew_service(page):
         log("步骤 2: 正在查找并点击 'Create Invoice' 按钮...")
         create_invoice_button = page.locator('button:has-text("Create Invoice")')
         create_invoice_button.wait_for(state="visible", timeout=30000)
-        create_invoice_button.click()
+        create_invoice_button.click(force=True)
         log("✅ 'Create Invoice' 按钮已点击。")
 
         log("步骤 3: 正在等待发票页面加载并查找 'Pay' 按钮...")
         pay_button = page.locator('a:has-text("Pay"), button:has-text("Pay")').first
-        pay_button.wait_for(state="visible", timeout=90000)
+        pay_button.wait_for(state="visible", timeout=10000)
         
         log("✅ 'Pay' 按钮已找到，正在点击...")
         pay_button.click()
